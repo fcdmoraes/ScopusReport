@@ -4,26 +4,47 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 import time
 
-def second_try(nome):
-	print("second try:", nome)
-	url = 'https://www-scopus.ez67.periodicos.capes.gov.br/results/results.uri?numberOfFields=0&src=s&clickedLink=&edit=&editSaveSearch=&origin=searchbasic&authorTab=&affiliationTab=&advancedTab=&scint=1&menu=search&tablin=&searchterm1={}&field1=SRCTITLE&dateType=Publication_Date_Type&yearFrom=2006&yearTo=Present&loadDate=7&documenttype=All&accessTypes=All&resetFormLink=&st1={}&st2=&sot=b&sdt=b&sl=25&s=SRCTITLE%28{}%29&sid=bcb197c7d0aeae158eb956eccdf7e5a1&searchId=bcb197c7d0aeae158eb956eccdf7e5a1&txGid=0d239eb0691e9b092f906f8218cbddc0&sort=plf-f&originationType=b&rr='.format(nome,nome,nome)
+class Source(object):
+	name
+	soup
+
+def second_try(name):
+	print("second try:", name)
+	name = name.replace('-',' ')
+	name = name.replace('&','And')
+	url = 'https://www-scopus.ez67.periodicos.capes.gov.br/results/results.uri?numberOfFields=0&src=s&clickedLink=&edit=&editSaveSearch=&origin=searchbasic&authorTab=&affiliationTab=&advancedTab=&scint=1&menu=search&tablin=&searchterm1={}&field1=SRCTITLE&dateType=Publication_Date_Type&yearFrom=2006&yearTo=Present&loadDate=7&documenttype=All&accessTypes=All&resetFormLink=&st1={}&st2=&sot=b&sdt=b&sl=25&s=SRCTITLE%28{}%29&sid=bcb197c7d0aeae158eb956eccdf7e5a1&searchId=bcb197c7d0aeae158eb956eccdf7e5a1&txGid=0d239eb0691e9b092f906f8218cbddc0&sort=plf-f&originationType=b&rr='.format(name,name,name)
 	driver.get(url)
 	soup = BeautifulSoup(driver.page_source, 'html.parser')
 	try:
 		Areas = soup.find('ul', id = "cluster_SUBJAREA")
 		Areas = Areas.find_all('span', class_="btnText")
-		Areas_texto = list(map(lambda area: area.get_text().replace('\n',''), Areas))
-		if ("Social Sciences" in Areas_texto):
-			return 'Unsure'
+		Areas_text = list(map(lambda area: area.get_text().replace('\n',''), Areas))
+		if ("Social Sciences" in Areas_text):
+			return check_duplicity()
+			# return 'Unsure'
 		else:
 			return False
 	except:
 		return 'Not Found'
 
+def check_duplicity():
+	soup = Source.soup
+	Source_title = soup.find('ud', id_="cluster_EXACTSRCTITLE")
+	Source_title = Source_title.find_all('span', class_='btnText')
+	if len(Source_title)==1:
+		return 'Ok'
+	else:
+		return 'Unsure'
+	# Source_title = list(map(lambda source: source.get_text(), Source_title))
+
+
+
+	
+
 ini = 0
 results = 100
 first_time = True
-output_filename = "teste_22.09.csv"
+output_filename = "teste_05.10.csv"
 
 dados = pd.read_csv("JHG.csv", skiprows = 1)
 # print(dados.head())
@@ -54,9 +75,11 @@ while j < results:
 	nome = '"'+titles[i]+'"'
 	exact_name = titles[i].replace('-',' ').title()
 	exact_name = exact_name.replace('&','And')
+	Source.name = exact_name
 	url = "https://www-scopus.ez67.periodicos.capes.gov.br/results/results.uri?sort=plf-f&src=s&st1={}&nlo=&nlr=&nls=&sid=65f022fdb8a1532543084f624d780d48&sot=b&sdt=cl&cluster=scoexactsrctitle%2c%22{}%22%2ct&sl=35&s=SRCTITLE%28{}%29+AND+PUBYEAR+%3e+2005&origin=resultslist&zone=leftSideBar&editSaveSearch=&txGid=564a84a1d55c56449e36e21586ef0bd7".format(nome,exact_name,exact_name)
 	driver.get(url)
 	soup = BeautifulSoup(driver.page_source, 'html.parser')
+	Source.soup = soup
 	try:
 		Areas = soup.find('ul', id = "cluster_SUBJAREA")
 		Areas = Areas.find_all('span', class_="btnText")
